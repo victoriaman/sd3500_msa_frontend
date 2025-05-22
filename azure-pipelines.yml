@@ -7,33 +7,100 @@ trigger:
 
 resources:
 - repo: self
+# Pool build
+pool:
+  vmImage: 'ubuntu-latest'
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: 'a6aa1620-e101-45b7-ad64-8c8d229f7f01'
-  imageRepository: 'practicaldevopsfrontend'
-  containerRegistry: 'practicaldevopsregistry.azurecr.io'
+  imageRepository: 'sd3500_msa_frontend'
+  containerRegistry: 'practicaldevopsregistry'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
-
+  fullImageName: '$(imageRepository):$(tag)'
+  sonarCloudServiceEndpoint: 'sonar connection'
+  sonarOrganization: 'victoriaman'
+  sonarProjectKey: 'victoriaman_sd3500_msa_frontend'
+  sonarProjectName: 'sd3500_msa_frontend'
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
 
 stages:
+- stage: ScanSourceByTrivy
+  displayName: Scan source code by trivy
+  jobs:
+  - job: TrivySourceScan
+    displayName: Scan source code
+    steps:
+    - task: NodeTaskRunnerInstaller@0
+      displayName: Install Node.js
+      inputs:
+        nodeVersion: '16'
+    - task: Npm@1
+      displayName: Npm install
+      inputs:
+        command: 'ci'
+        workingDir: '.'
+    - task: trivy@2
+      displayName: Scan source code
+      inputs:
+        version: 'latest'
+        type: 'filesystem'
+        target: '.'
+        severities: 'HIGH,CRITICAL'
+        ignoreUnfixed: true
+        showSuppressed: true
+        ignoreScanErrors: true
+
+- stage: ScanSourceBySonar
+  displayName: Scan source code by Sonar
+  jobs:
+  - job: TrivySourceScan
+    displayName: Scan source code
+    steps:
+    - task: SonarCloudPrepare@3
+      inputs:
+        SonarQube: $(sonarCloudServiceEndpoint)
+        organization: $(sonarOrganization)
+        scannerMode: 'cli'
+        configMode: 'manual'
+        cliProjectKey: $(sonarProjectKey)
+        cliProjectName: $(sonarProjectName)
+        cliSources: '.'
+
 - stage: Build
-  displayName: Build and push stage
+  displayName: Build, scan and push an image to container registry
   jobs:
   - job: Build
-    displayName: Build
-    pool:
-      vmImage: $(vmImageName)
+    displayName: Build, scan and push an image to container registry
     steps:
     - task: Docker@2
-      displayName: Build and push an image to container registry
+      displayName: Build Docker image
       inputs:
-        command: buildAndPush
+        containerRegistry: $(containerRegistry)
         repository: $(imageRepository)
-        dockerfile: $(dockerfilePath)
-        containerRegistry: $(dockerRegistryServiceConnection)
+        command: 'build'
+        Dockerfile: $(dockerfilePath)
+        buildContext: '.'
         tags: |
           $(tag)
+    - task: trivy@2
+      displayName: Scan image using Trivy
+      inputs:
+        version: 'latest'
+        type: 'image'
+        target: '$(fullImageName)'
+        severities: 'HIGH, CRITICAL'
+        ignoreUnfixed: true
+        showSuppressed: true
+        ignoreScanErrors: true
+
+    - task: Docker@2
+      displayName: Push Docker image to container registry
+      inputs:
+        containerRegistry: $(containerRegistry)
+        repository: $(imageRepository)
+        command: 'push'
+        tags: |
+                $(tag)
+    
