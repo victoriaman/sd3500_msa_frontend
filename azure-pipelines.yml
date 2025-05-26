@@ -124,14 +124,15 @@ stages:
           steps:
           - checkout: self
 
-          - script: |
-              echo "Top-level files:"
-              ls -al $(Build.SourcesDirectory)
-            displayName: Debug list sources
-
-          - script: |
-              echo "DEBUG: Checking if frontend.yaml exists..."
-              ls -al $(Build.SourcesDirectory)/.azure-devops-cd
+          - task: AzureCLI@2
+            displayName: Set AKS context
+            inputs:
+              azureSubscription: 'test-devops-aks-devops-ns-1748268581468'  # Azure DevOps service connection
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Configuring kubectl for AKS cluster..."
+                az aks get-credentials --resource-group $(aksResourceGroup) --name $(aksClusterName) --overwrite-existing
 
           - script: |
               echo "Replacing image tag in frontend.yaml"
@@ -149,7 +150,7 @@ stages:
               action: 'deploy'
               connectionType: 'kubernetesServiceConnection'
               kubernetesServiceConnection: 'test-devops-aks-devops-ns-1748268581468'
-              namespace: 'devops-ns'
+              namespace: $(aksNameSpace)
               manifests: $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
 
           # - task: Kubernetes@1
