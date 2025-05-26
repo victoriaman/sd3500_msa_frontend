@@ -123,6 +123,11 @@ stages:
         deploy:
           steps:
           - script: |
+              echo "Top-level files:"
+              ls -al $(Build.SourcesDirectory)
+            displayName: Debug list sources
+
+          - script: |
               echo "DEBUG: Checking if frontend.yaml exists..."
               ls -al $(Build.SourcesDirectory)/.azure-devops-cd
 
