@@ -117,7 +117,7 @@ stages:
   jobs:
   - deployment: DeployFrontend
     displayName: Deploy frontend to AKS
-    environment: 'aks-dev'
+    environment: 'test'
     strategy:
       runOnce:
         deploy:
@@ -132,16 +132,25 @@ stages:
               kubectl get namespace $(aksNameSpace) || kubectl create namespace $(aksNameSpace)
             displayName: Ensure $(aksNameSpace) namespace exists
 
-          - task: Kubernetes@1
-            displayName: Set image tag in deployment YAML
+          - task: KubernetesManifest@1
+            displayName: 'Deploy'
             inputs:
-              connectionType: 'Azure Resource Manager'
-              azureSubscription: '$(azureSubscriptionName)'
-              azureResourceGroup: '$(aksResourceGroup)'
-              kubernetesCluster: '$(aksClusterName)'
-              namespace: '$(aksNameSpace)'
-              command: 'apply'
-              useConfigurationFile: true
-              configuration: |
-                $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
+              action: 'deploy'
+              connectionType: 'kubernetesServiceConnection'
+              kubernetesServiceConnection: 'test-devops-aks-devops-ns-1748268581468'
+              namespace: 'devops-ns'
+              manifests: $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
+
+          # - task: Kubernetes@1
+          #   displayName: Set image tag in deployment YAML
+          #   inputs:
+          #     connectionType: 'Azure Resource Manager'
+          #     azureSubscription: '$(azureSubscriptionName)'
+          #     azureResourceGroup: '$(aksResourceGroup)'
+          #     kubernetesCluster: '$(aksClusterName)'
+          #     namespace: '$(aksNameSpace)'
+          #     command: 'apply'
+          #     useConfigurationFile: true
+          #     configuration: |
+          #       $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
     
