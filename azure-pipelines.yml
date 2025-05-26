@@ -123,6 +123,10 @@ stages:
         deploy:
           steps:
           - script: |
+              echo "DEBUG: Checking if frontend.yaml exists..."
+              ls -al $(Build.SourcesDirectory)/.azure-devops-cd
+
+          - script: |
               echo "Replacing image tag in frontend.yaml"
               sed -i 's|sample-image-tag|$(fullImageName)|g' $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
             displayName: Replace image tag in YAML
