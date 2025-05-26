@@ -99,8 +99,8 @@ stages:
     - task: trivy@2
       displayName: Scan Docker image with Trivy
       inputs:
-        method: 'docker'
-        image:  $(fullImageName)
+        type: 'image'
+        target: '$(fullImageName)'
         severities: 'CRITICAL,HIGH'
         ignoreUnfixed: true
         showSuppressed: true
