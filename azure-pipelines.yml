@@ -14,10 +14,11 @@ pool:
 variables:
   # Container registry service connection established during pipeline creation
   imageRepository: 'sd3500_msa_frontend'
-  containerRegistry: 'practicaldevopsregistry'
+  containerRegistry: 'practicaldevopsregistry'             # This is your ACR service connection
+  dockerRegistry: 'practicaldevopsregistry.azurecr.io'     # This is your actual ACR hostname
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
-  fullImageName: '$(imageRepository):$(tag)'
+  fullImageName: '$(dockerRegistry)/$(imageRepository):$(tag)'
   sonarCloudServiceEndpoint: 'sonar connection'
   sonarOrganization: 'victoriaman'
   sonarProjectKey: 'victoriaman_sd3500_msa_frontend'
@@ -55,8 +56,8 @@ stages:
 - stage: ScanSourceBySonar
   displayName: Scan source code by Sonar
   jobs:
-  - job: TrivySourceScan
-    displayName: Scan source code
+  - job: SonarScan
+    displayName: Run SonarCloud Analysis
     steps:
     - task: SonarCloudPrepare@3
       inputs:
@@ -68,6 +69,7 @@ stages:
         cliProjectName: $(sonarProjectName)
         cliSources: '.'
 
+# --- Stage 3: Build, Scan Image with Trivy, Push to ACR
 - stage: Build
   displayName: Build, scan and push an image to container registry
   jobs:
@@ -84,16 +86,15 @@ stages:
         buildContext: '.'
         tags: |
           $(tag)
-    - task: trivy@2
-      displayName: Scan image using Trivy
-      inputs:
-        version: 'latest'
-        type: 'image'
-        target: '$(fullImageName)'
-        severities: 'HIGH, CRITICAL'
-        ignoreUnfixed: true
-        showSuppressed: true
-        ignoreScanErrors: true
+
+    - script: |
+        echo "Tagging image with full name: $(fullImageName)"
+        docker tag $(imageRepository):$(tag) $(fullImageName)
+      displayName: Tag image with full registry path
+
+    - script: |
+        trivy image --severity HIGH,CRITICAL --ignore-unfixed --format table $(fullImageName)
+      displayName: Scan Docker image with Trivy
 
     - task: Docker@2
       displayName: Push Docker image to container registry
