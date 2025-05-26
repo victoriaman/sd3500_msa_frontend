@@ -117,6 +117,7 @@ stages:
   jobs:
   - deployment: DeployFrontend
     displayName: Deploy frontend to AKS
+    environment: 'aks-dev'
     strategy:
       runOnce:
         deploy:
