@@ -23,6 +23,10 @@ variables:
   sonarOrganization: 'victoriaman'
   sonarProjectKey: 'victoriaman_sd3500_msa_frontend'
   sonarProjectName: 'sd3500_msa_frontend'
+  azureSubscriptionName: 'Azure subscription 1'
+  aksResourceGroup: 'devops-aks'
+  aksClusterName: 'devops-aks'
+  aksNameSpace: 'devops-ns'
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
 
@@ -87,15 +91,6 @@ stages:
         tags: |
           $(tag)
 
-    # - script: |
-    #     echo "Scanning image: $(fullImageName)"
-    #     trivy image \
-    #       --severity HIGH,CRITICAL \
-    #       --ignore-unfixed \
-    #       --show-suppressed \
-    #       --format table \
-    #       $(fullImageName)
-    #   displayName: Scan Docker image with Trivy
     - task: trivy@2
       displayName: Scan Docker image with Trivy
       inputs:
@@ -115,4 +110,37 @@ stages:
         command: 'push'
         tags: |
           $(tag)
+
+- stage: Deploy
+  displayName: Deploy to AKS
+  dependsOn: Build
+  jobs:
+  - deployment: DeployFrontend
+    displayName: Deploy frontend to AKS
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: |
+              echo "Replacing image tag in frontend.yaml"
+              sed -i 's|sample-image-tag|$(fullImageName)|g' $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
+            displayName: Replace image tag in YAML
+
+          - script: |
+              echo "Ensuring Kubernetes namespace $(aksNameSpace) exists..."
+              kubectl get namespace $(aksNameSpace) || kubectl create namespace $(aksNameSpace)
+            displayName: Ensure $(aksNameSpace) namespace exists
+
+          - task: Kubernetes@1
+            displayName: Set image tag in deployment YAML
+            inputs:
+              connectionType: 'Azure Resource Manager'
+              azureSubscription: '$(azureSubscriptionName)'
+              azureResourceGroup: '$(aksResourceGroup)'
+              kubernetesCluster: '$(aksClusterName)'
+              namespace: '$(aksNameSpace)'
+              command: 'apply'
+              useConfigurationFile: true
+              configuration: |
+                $(Build.SourcesDirectory)/.azure-devops-cd/frontend.yaml
     
