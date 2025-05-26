@@ -88,12 +88,13 @@ stages:
           $(tag)
 
     - script: |
-        echo "Tagging image with full name: $(fullImageName)"
-        docker tag $(imageRepository):$(tag) $(fullImageName)
-      displayName: Tag image with full registry path
-
-    - script: |
-        trivy image --severity HIGH,CRITICAL --ignore-unfixed --format table $(fullImageName)
+        echo "Scanning image: $(fullImageName)"
+        trivy image \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --show-suppressed \
+          --format table \
+          $(fullImageName)
       displayName: Scan Docker image with Trivy
 
     - task: Docker@2
@@ -103,5 +104,5 @@ stages:
         repository: $(imageRepository)
         command: 'push'
         tags: |
-                $(tag)
+          $(tag)
     
