@@ -122,6 +122,8 @@ stages:
       runOnce:
         deploy:
           steps:
+          - checkout: self
+
           - script: |
               echo "Top-level files:"
               ls -al $(Build.SourcesDirectory)
