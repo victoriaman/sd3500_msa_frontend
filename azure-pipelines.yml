@@ -127,7 +127,7 @@ stages:
           - task: AzureCLI@2
             displayName: Set AKS context
             inputs:
-              azureSubscription: 'test-devops-aks-devops-ns-1748268581468'  # Azure DevOps service connection
+              azureSubscription: $(azureSubscriptionName)  # Azure DevOps service connection
               scriptType: 'bash'
               scriptLocation: 'inlineScript'
               inlineScript: |
