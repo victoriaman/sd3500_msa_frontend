@@ -23,7 +23,7 @@ variables:
   sonarOrganization: 'victoriaman'
   sonarProjectKey: 'victoriaman_sd3500_msa_frontend'
   sonarProjectName: 'sd3500_msa_frontend'
-  azureSubscriptionName: 'Azure subscription 1'
+  azureSubscriptionName: 'azure-devops-subscription'
   aksResourceGroup: 'devops-aks'
   aksClusterName: 'devops-aks'
   aksNameSpace: 'devops-ns'
